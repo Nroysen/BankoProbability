@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banko Probability Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        /* ── Reset & Base ─────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* ── Colour tokens (Velliv-inspired) ──────────── */
+        :root {
+            --green-dark:  #004d3d;
+            --green-mid:   #007a5e;
+            --green-light: #00b386;
+            --green-pale:  #e6f7f1;
+            --accent:      #ffd166;
+            --accent-2:    #e63946;
+            --bg:          #f5f6f8;
+            --card:        #ffffff;
+            --border:      #e2e5ea;
+            --text:        #1a1a2e;
+            --text-muted:  #6b7280;
+            --radius:      14px;
+            --shadow:      0 2px 12px rgba(0,0,0,.06);
+            --shadow-lg:   0 8px 30px rgba(0,0,0,.10);
+        }
+
+        /* ── Navigation ───────────────────────────────── */
+        .navbar {
+            background: var(--green-dark);
+            color: #fff;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+        }
+        .navbar .logo {
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: -.02em;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+        .navbar nav a {
+            color: rgba(255,255,255,.85);
+            text-decoration: none;
+            font-size: .85rem;
+            font-weight: 500;
+            margin-left: 1.4rem;
+            transition: color .2s;
+        }
+        .navbar nav a:hover { color: var(--accent); }
+
+        /* ── Hero ─────────────────────────────────────── */
+        .hero {
+            background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+            color: #fff;
+            padding: 3rem 2rem 2.25rem;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.1rem;
+            font-weight: 700;
+            letter-spacing: -.03em;
+            margin-bottom: .4rem;
+        }
+        .hero p {
+            font-size: 1rem;
+            color: rgba(255,255,255,.82);
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        /* ── Layout ───────────────────────────────────── */
+        main {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 1.75rem 2rem 4rem;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem 1.75rem;
+            margin-bottom: 1.75rem;
+        }
+        .card h2 {
+            font-size: 1.15rem;
+            color: var(--green-dark);
+            margin-bottom: 1rem;
+            font-weight: 700;
+            letter-spacing: -.01em;
+        }
+        .card .sub {
+            color: var(--text-muted);
+            font-size: .85rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ── Controls ─────────────────────────────────── */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem 1.5rem;
+        }
+        .control-group label {
+            display: block;
+            font-size: .72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: .35rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: .6rem .8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: .95rem;
+            font-weight: 500;
+            background: var(--bg);
+            color: var(--text);
+            font-family: inherit;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: var(--green-mid);
+            box-shadow: 0 0 0 3px rgba(0, 179, 134, .15);
+        }
+        .control-group .hint {
+            font-size: .72rem;
+            color: var(--text-muted);
+            margin-top: .3rem;
+        }
+        .control-group .actions {
+            display: flex;
+            gap: .5rem;
+        }
+        button.primary {
+            background: var(--green-mid);
+            color: #fff;
+            border: none;
+            padding: .6rem 1rem;
+            border-radius: 8px;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s;
+            font-family: inherit;
+        }
+        button.primary:hover { background: var(--green-dark); }
+        button.primary:disabled {
+            background: #b8c2c8;
+            cursor: not-allowed;
+        }
+
+        /* ── KPI strip ────────────────────────────────── */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+        .kpi {
+            background: var(--card);
+            padding: 1.1rem 1.25rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--green-mid);
+        }
+        .kpi.tier-1 { border-left-color: var(--green-light); }
+        .kpi.tier-2 { border-left-color: var(--green-mid); }
+        .kpi.tier-3 { border-left-color: var(--accent-2); }
+        .kpi .label {
+            font-size: .7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: .25rem;
+            font-weight: 600;
+        }
+        .kpi .value {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--green-dark);
+            line-height: 1.1;
+        }
+        .kpi .sub {
+            font-size: .75rem;
+            color: var(--text-muted);
+            margin-top: .25rem;
+        }
+
+        /* ── Chart ────────────────────────────────────── */
+        .chart-container {
+            position: relative;
+            height: 380px;
+        }
+
+        /* ── Tables / Matrix ──────────────────────────── */
+        .table-scroll {
+            overflow-x: auto;
+            max-height: 600px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .82rem;
+        }
+        th, td {
+            padding: .45rem .55rem;
+            text-align: right;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        th:first-child, td:first-child {
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            left: 0;
+            background: var(--card);
+            z-index: 2;
+            border-right: 1px solid var(--border);
+        }
+        thead th {
+            background: var(--green-pale);
+            color: var(--green-dark);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            font-size: .78rem;
+        }
+        thead th:first-child {
+            z-index: 4;
+            background: var(--green-pale);
+        }
+        tbody tr:hover td { background: rgba(0, 179, 134, .04); }
+        tbody tr:hover td:first-child { background: rgba(0, 179, 134, .08); }
+
+        .heatmap td:not(:first-child) {
+            color: var(--text);
+            font-weight: 500;
+            transition: filter .15s;
+            cursor: default;
+        }
+        .heatmap td:not(:first-child):hover { filter: brightness(.92); }
+
+        /* ── Tier legend ──────────────────────────────── */
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            font-size: .78rem;
+            color: var(--text-muted);
+            margin-top: .75rem;
+            flex-wrap: wrap;
+        }
+        .legend .bar {
+            height: 12px;
+            width: 220px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #f0faf6, #007a5e, #004d3d);
+        }
+        .legend .ticks {
+            display: flex;
+            justify-content: space-between;
+            width: 220px;
+            font-size: .7rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ── Tier badges ──────────────────────────────── */
+        .tier-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .15rem .55rem;
+            border-radius: 999px;
+            font-size: .7rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+        }
+        .tier-pill.t1 { background: #e6f7f1; color: var(--green-dark); }
+        .tier-pill.t2 { background: #d1ecdc; color: var(--green-dark); }
+        .tier-pill.t3 { background: #ffe6e9; color: var(--accent-2); }
+
+        /* ── Notes / Math ─────────────────────────────── */
+        .notes h3 { margin: 1rem 0 .5rem; font-size: .98rem; color: var(--green-dark); }
+        .notes p { font-size: .9rem; color: var(--text); margin-bottom: .65rem; }
+        .notes ul { margin: .25rem 0 .75rem 1.25rem; font-size: .9rem; }
+        .notes li { margin-bottom: .25rem; }
+        .notes code {
+            background: var(--green-pale);
+            padding: .12rem .35rem;
+            border-radius: 4px;
+            font-size: .82rem;
+            color: var(--green-dark);
+            font-family: 'Consolas', 'Menlo', monospace;
+        }
+        .formula {
+            background: var(--bg);
+            border-left: 4px solid var(--green-mid);
+            padding: .75rem 1rem;
+            margin: .75rem 0;
+            font-family: 'Consolas', 'Menlo', monospace;
+            font-size: .85rem;
+            color: var(--green-dark);
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .status {
+            font-size: .8rem;
+            color: var(--text-muted);
+            margin-top: .4rem;
+        }
+        .status.error { color: var(--accent-2); }
+        .status.success { color: var(--green-mid); }
+
+        /* Toggle for showing/hiding MC overlay */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .toggle-row label {
+            font-size: .85rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            cursor: pointer;
+        }
+        .toggle-row input[type=checkbox] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--green-mid);
+        }
+
+        @media (max-width: 720px) {
+            .hero h1 { font-size: 1.5rem; }
+            main { padding: 1rem; }
+            .navbar nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">🎱 Banko Probability Calculator</div>
+        <nav>
+            <a href="#summary">Summary</a>
+            <a href="#chart">Chart</a>
+            <a href="#distribution">Distribution</a>
+            <a href="#matrix">Matrix</a>
+            <a href="#detail">Detail</a>
+            <a href="#notes">Notes</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Banko Win Probabilities</h1>
+        <p>How does the probability of someone winning <strong>1 row</strong>, <strong>2 rows</strong>, or a <strong>full plate</strong> evolve round-by-round, given any number of players and plates per player? Numbers are drawn without replacement from 1–90.</p>
+    </section>
+
+    <main>
+        <!-- ============ CONTROLS ============ -->
+        <section class="card" id="controls">
+            <h2>Setup</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="players">Number of players</label>
+                    <input type="number" id="players" value="20" min="1" max="500" step="1">
+                    <div class="hint">Used as max for the matrix columns</div>
+                </div>
+                <div class="control-group">
+                    <label for="plates">Plates per player</label>
+                    <input type="number" id="plates" value="2" min="1" max="20" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="tier">Tier shown in matrix &amp; heatmap</label>
+                    <select id="tier">
+                        <option value="1">1 row (first prize)</option>
+                        <option value="2">2 rows</option>
+                        <option value="3">Full plate / full house</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="mcButton">Cross-check with simulation</label>
+                    <div class="actions">
+                        <button class="primary" id="mcButton" type="button">Run Monte Carlo</button>
+                    </div>
+                    <div class="hint" id="mcStatus">2.000 random games — verifies the analytic curves.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ KPI STRIP ============ -->
+        <section class="kpi-strip" id="summary">
+            <div class="kpi">
+                <div class="label">Total plates in play</div>
+                <div class="value" id="kpiPlates">—</div>
+                <div class="sub" id="kpiPlatesSub">players × plates / player</div>
+            </div>
+            <div class="kpi tier-1">
+                <div class="label">Expected round — 1st row</div>
+                <div class="value" id="kpiE1">—</div>
+                <div class="sub">First win in banko</div>
+            </div>
+            <div class="kpi tier-2">
+                <div class="label">Expected round — 2 rows</div>
+                <div class="value" id="kpiE2">—</div>
+                <div class="sub">Two completed rows on the same plate</div>
+            </div>
+            <div class="kpi tier-3">
+                <div class="label">Expected round — full plate</div>
+                <div class="value" id="kpiE3">—</div>
+                <div class="sub">All 15 numbers on a plate marked</div>
+            </div>
+        </section>
+
+        <!-- ============ CHART ============ -->
+        <section class="card" id="chart">
+            <h2>Probability curves — current setup</h2>
+            <div class="sub">Probability that <em>at least one player</em> has achieved each prize tier by draw <em>k</em>. Dashed lines are Monte Carlo if you press the button above.</div>
+            <div class="toggle-row">
+                <label><input type="checkbox" id="showSingle" /> Also show single-plate curves</label>
+            </div>
+            <div class="chart-container">
+                <canvas id="probChart"></canvas>
+            </div>
+        </section>
+
+        <!-- ============ DISTRIBUTION ============ -->
+        <section class="card" id="distribution">
+            <h2>First-win distribution — normal approximation</h2>
+            <div class="sub">
+                Probability of the first winner appearing at exactly round <em>k</em> (bars = exact discrete distribution;
+                smooth line = fitted normal). Vertical dashed lines mark μ and ±1σ, ±2σ, ±3σ;
+                horizontal dashed lines mark the corresponding PDF heights — showing where the bell curve crosses each σ level.
+            </div>
+            <div id="distKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:.75rem;margin-bottom:1.25rem"></div>
+            <div class="chart-container" style="height:430px">
+                <canvas id="distChartCanvas"></canvas>
+            </div>
+        </section>
+
+        <!-- ============ MATRIX (rounds × players) ============ -->
+        <section class="card" id="matrix">
+            <h2>Matrix — probability of someone winning by round × number of players</h2>
+            <div class="sub">
+                Rows = round number (numbers drawn). Columns = number of players (each with the selected plates / player).
+                Cell = P(at least one player has reached the selected tier by that round).
+            </div>
+            <div class="table-scroll">
+                <table id="matrixTable" class="heatmap"></table>
+            </div>
+            <div class="legend">
+                <span>P =</span>
+                <div>
+                    <div class="bar"></div>
+                    <div class="ticks"><span>0%</span><span>50%</span><span>100%</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ DETAILED TABLE ============ -->
+        <section class="card" id="detail">
+            <h2>Detail — probabilities at each round for the current setup</h2>
+            <div class="sub">Single-plate columns are exact; multi-plate columns assume independence between plates (good approximation when total plates × 15 ≪ 90).</div>
+            <div class="table-scroll" style="max-height:500px">
+                <table id="detailTable"></table>
+            </div>
+        </section>
+
+        <!-- ============ NOTES ============ -->
+        <section class="card notes" id="notes">
+            <h2>Notes &amp; math</h2>
+
+            <h3>Single plate (exact)</h3>
+            <p>A standard plate has 15 numbers split across 3 rows of 5 numbers each (the 3 rows share no numbers). With numbers drawn uniformly without replacement from 1–90:</p>
+            <div class="formula">P(a fixed set of m numbers all drawn within first k) = C(k, m) / C(90, m) = ∏_{i=0}^{m−1} (k−i) / (90−i)</div>
+            <p>Let <code>p_m(k)</code> denote the above. Using inclusion–exclusion over the 3 disjoint rows on a single plate:</p>
+            <ul>
+                <li><code>P(≥1 row by k) = 3·p₅(k) − 3·p₁₀(k) + p₁₅(k)</code></li>
+                <li><code>P(≥2 rows by k) = 3·p₁₀(k) − 2·p₁₅(k)</code></li>
+                <li><code>P(full plate by k) = p₁₅(k)</code></li>
+            </ul>
+            <p>These are <strong>exact</strong> and do not depend on the column arrangement of numbers — only on the row partition.</p>
+
+            <h3>Multiple plates (independence approximation)</h3>
+            <p>With <code>N</code> total plates in play, the probability that <em>at least one</em> plate has achieved tier <em>T</em> by round <em>k</em> is approximated as:</p>
+            <div class="formula">P(any wins T by k) ≈ 1 − (1 − p_T^single(k))^N</div>
+            <p>This assumes plates are independent, which is an approximation: real plates draw their numbers from a shared pool of 90, so there is mild positive correlation (one plate progressing tends to coincide with others progressing). The approximation is excellent when <code>N · 15 ≪ 90</code> and a good upper bound otherwise. Press <strong>Run Monte Carlo</strong> to see the empirical curves alongside.</p>
+
+            <h3>Expected first-win round</h3>
+            <p>Using the survival representation for a nonnegative integer random variable:</p>
+            <div class="formula">E[K_T] ≈ Σ_{k=0}^{89} (1 − P_T(k))   plus a small tail for k ≥ 90</div>
+
+            <h3>Monte Carlo</h3>
+            <p>Each trial draws <code>N</code> independent random plates (each = a random 15-subset of {1,…,90} split into three rows of 5), then a random permutation of 1–90, and records the first round at which any plate hits each tier. This treats plates as iid 15-subsets — the same independence assumption as above — so it cross-checks the closed form rather than capturing correlation from a real plate-generation algorithm.</p>
+        </section>
+    </main>
+
+    <script>
+        // ============================================================
+        //  Banko probability primitives
+        // ============================================================
+
+        const N_TOTAL = 90;     // total numbers in the pool
+        const ROW_SIZE = 5;
+        const ROWS_PER_PLATE = 3;
+        const PLATE_SIZE = ROW_SIZE * ROWS_PER_PLATE;  // 15
+
+        // p_m(k) = P(a fixed set of m specific numbers all drawn within first k draws)
+        //        = C(k, m) / C(90, m)
+        function probAllDrawn(m, k) {
+            if (m === 0) return 1;
+            if (k < m) return 0;
+            if (k >= N_TOTAL) return 1;
+            let p = 1;
+            for (let i = 0; i < m; i++) {
+                p *= (k - i) / (N_TOTAL - i);
+            }
+            return p;
+        }
+
+        // Single-plate probabilities by inclusion-exclusion over 3 disjoint rows of 5
+        function singlePlateProbs(k) {
+            const p5  = probAllDrawn(ROW_SIZE, k);
+            const p10 = probAllDrawn(2 * ROW_SIZE, k);
+            const p15 = probAllDrawn(PLATE_SIZE, k);
+            const oneRow  = Math.max(0, Math.min(1, 3*p5  - 3*p10 + p15));
+            const twoRows = Math.max(0, Math.min(1, 3*p10 - 2*p15));
+            const full    = Math.max(0, Math.min(1, p15));
+            return { oneRow, twoRows, full };
+        }
+
+        // Multi-plate "at least one wins tier T by k" under independence
+        function anyWins(pSingle, numPlates) {
+            if (numPlates <= 0) return 0;
+            if (pSingle <= 0) return 0;
+            if (pSingle >= 1) return 1;
+            // Numerical stability via log1p / expm1
+            const logSurv = numPlates * Math.log(1 - pSingle);
+            return -Math.expm1(logSurv);
+        }
+
+        // Build full per-round arrays of single-plate probabilities (k = 0..90)
+        function buildSingleSeries() {
+            const series = { oneRow: new Array(N_TOTAL + 1),
+                             twoRows: new Array(N_TOTAL + 1),
+                             full:    new Array(N_TOTAL + 1) };
+            for (let k = 0; k <= N_TOTAL; k++) {
+                const s = singlePlateProbs(k);
+                series.oneRow[k]  = s.oneRow;
+                series.twoRows[k] = s.twoRows;
+                series.full[k]    = s.full;
+            }
+            return series;
+        }
+
+        // Multi-plate series given single-plate series and total plate count
+        function buildMultiSeries(single, numPlates) {
+            const series = { oneRow: new Array(N_TOTAL + 1),
+                             twoRows: new Array(N_TOTAL + 1),
+                             full:    new Array(N_TOTAL + 1) };
+            for (let k = 0; k <= N_TOTAL; k++) {
+                series.oneRow[k]  = anyWins(single.oneRow[k],  numPlates);
+                series.twoRows[k] = anyWins(single.twoRows[k], numPlates);
+                series.full[k]    = anyWins(single.full[k],    numPlates);
+            }
+            return series;
+        }
+
+        // E[first-win round] ≈ Σ_{k=0}^{89} (1 − P(by k))
+        function expectedRound(series) {
+            let sum = 0;
+            for (let k = 0; k < N_TOTAL; k++) sum += (1 - series[k]);
+            return sum;
+        }
+
+        // ============================================================
+        //  Heatmap colouring
+        // ============================================================
+        function probToColor(p) {
+            const t = Math.max(0, Math.min(1, p));
+            // linear interp from pale to dark green
+            const start = [240, 250, 246]; // very pale
+            const end   = [0, 77, 61];     // dark green
+            const r = Math.round(start[0] + (end[0] - start[0]) * t);
+            const g = Math.round(start[1] + (end[1] - start[1]) * t);
+            const b = Math.round(start[2] + (end[2] - start[2]) * t);
+            return `rgb(${r},${g},${b})`;
+        }
+        function probToText(p) { return p > 0.55 ? '#fff' : '#1a1a2e'; }
+
+        // ── European number formatting (comma decimal, period thousands) ──
+        const EU_LOCALE = 'da-DK';
+        function fmtPct(p, digits = 1) {
+            if (p < 0.0005 && p > 0) {
+                return (p * 100).toExponential(1).replace('.', ',') + '%';
+            }
+            return (p * 100).toLocaleString(EU_LOCALE, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            }) + '%';
+        }
+        function fmtNum(n, digits = 0) {
+            return n.toLocaleString(EU_LOCALE, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        }
+
+        // ============================================================
+        //  Layout helpers
+        // ============================================================
+        function buildRoundList() {
+            // Show every round 1..90 (step 1)
+            const rounds = [];
+            for (let k = 1; k <= N_TOTAL; k += 1) rounds.push(k);
+            return rounds;
+        }
+
+        function buildPlayerList(maxPlayers) {
+            // Player counts in steps of 5; include the chosen max if it isn't a multiple of 5
+            const players = [];
+            for (let n = 5; n <= maxPlayers; n += 5) players.push(n);
+            if (players.length === 0 || players[players.length - 1] !== maxPlayers) {
+                players.push(maxPlayers);
+            }
+            return players;
+        }
+
+        // ============================================================
+        //  Rendering
+        // ============================================================
+        const SINGLE = buildSingleSeries();
+        let chart    = null;
+        let distChart = null;
+        let mcResult = null;  // { oneRow:[...], twoRows:[...], full:[...] }
+
+        function render() {
+            const players   = Math.max(1, parseInt(document.getElementById('players').value) || 1);
+            const plates    = Math.max(1, parseInt(document.getElementById('plates').value)  || 1);
+            const tier      = document.getElementById('tier').value;
+            const showSing  = document.getElementById('showSingle').checked;
+            const totalPlates = players * plates;
+
+            // ── Multi-plate series ──
+            const multi = buildMultiSeries(SINGLE, totalPlates);
+
+            // ── KPIs ──
+            document.getElementById('kpiPlates').textContent = fmtNum(totalPlates);
+            document.getElementById('kpiPlatesSub').textContent =
+                `${players} player${players === 1 ? '' : 's'} × ${plates} plate${plates === 1 ? '' : 's'} / player`;
+            document.getElementById('kpiE1').textContent = fmtNum(expectedRound(multi.oneRow), 1);
+            document.getElementById('kpiE2').textContent = fmtNum(expectedRound(multi.twoRows), 1);
+            document.getElementById('kpiE3').textContent = fmtNum(expectedRound(multi.full), 1);
+
+            // ── Chart ──
+            renderChart(multi, showSing);
+
+            // ── Main matrix (rounds × players for selected tier) ──
+            renderMatrix(players, plates, tier);
+
+            // ── Detail table ──
+            renderDetailTable(multi);
+
+            // ── Distribution chart ──
+            renderDistributionChart(multi, tier);
+        }
+
+        // ----- Chart -----
+        function renderChart(multi, showSingle) {
+            const labels = Array.from({length: N_TOTAL + 1}, (_, k) => k);
+            const ctx = document.getElementById('probChart').getContext('2d');
+
+            const datasets = [
+                {
+                    label: '≥ 1 row (any player)',
+                    data: multi.oneRow,
+                    borderColor: '#00b386',
+                    backgroundColor: 'rgba(0,179,134,.10)',
+                    fill: false, tension: .15, borderWidth: 2.2, pointRadius: 0
+                },
+                {
+                    label: '≥ 2 rows (any player)',
+                    data: multi.twoRows,
+                    borderColor: '#007a5e',
+                    backgroundColor: 'rgba(0,122,94,.10)',
+                    fill: false, tension: .15, borderWidth: 2.2, pointRadius: 0
+                },
+                {
+                    label: 'Full plate (any player)',
+                    data: multi.full,
+                    borderColor: '#e63946',
+                    backgroundColor: 'rgba(230,57,70,.10)',
+                    fill: false, tension: .15, borderWidth: 2.2, pointRadius: 0
+                }
+            ];
+
+            if (showSingle) {
+                datasets.push(
+                    {
+                        label: '≥ 1 row (single plate)',
+                        data: SINGLE.oneRow,
+                        borderColor: '#00b386',
+                        borderDash: [4, 4],
+                        fill: false, tension: .15, borderWidth: 1.5, pointRadius: 0
+                    },
+                    {
+                        label: '≥ 2 rows (single plate)',
+                        data: SINGLE.twoRows,
+                        borderColor: '#007a5e',
+                        borderDash: [4, 4],
+                        fill: false, tension: .15, borderWidth: 1.5, pointRadius: 0
+                    },
+                    {
+                        label: 'Full plate (single plate)',
+                        data: SINGLE.full,
+                        borderColor: '#e63946',
+                        borderDash: [4, 4],
+                        fill: false, tension: .15, borderWidth: 1.5, pointRadius: 0
+                    }
+                );
+            }
+
+            if (mcResult) {
+                datasets.push(
+                    {
+                        label: 'MC ≥ 1 row',
+                        data: mcResult.oneRow,
+                        borderColor: '#0a8a5f',
+                        borderDash: [2, 3],
+                        fill: false, tension: 0, borderWidth: 1, pointRadius: 0
+                    },
+                    {
+                        label: 'MC ≥ 2 rows',
+                        data: mcResult.twoRows,
+                        borderColor: '#005c46',
+                        borderDash: [2, 3],
+                        fill: false, tension: 0, borderWidth: 1, pointRadius: 0
+                    },
+                    {
+                        label: 'MC full plate',
+                        data: mcResult.full,
+                        borderColor: '#a31621',
+                        borderDash: [2, 3],
+                        fill: false, tension: 0, borderWidth: 1, pointRadius: 0
+                    }
+                );
+            }
+
+            if (chart) {
+                chart.data.labels = labels;
+                chart.data.datasets = datasets;
+                chart.update('none');
+                return;
+            }
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Inter' }, boxWidth: 14 } },
+                        tooltip: {
+                            callbacks: {
+                                title: items => 'After ' + items[0].label + ' draws',
+                                label: ctx => `${ctx.dataset.label}: ${fmtPct(ctx.parsed.y, 2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Round (numbers drawn)' }, grid: { color: '#eef0f3' } },
+                        y: { title: { display: true, text: 'Probability' },
+                             min: 0, max: 1,
+                             ticks: { callback: v => fmtPct(v, 0) },
+                             grid: { color: '#eef0f3' } }
+                    }
+                }
+            });
+        }
+
+        // ----- Main heatmap matrix -----
+        function renderMatrix(maxPlayers, platesPerPlayer, tier) {
+            const tbl = document.getElementById('matrixTable');
+            const rounds  = buildRoundList();
+            const players = buildPlayerList(maxPlayers);
+
+            // Header
+            let html = '<thead><tr><th>Round \\ Players</th>';
+            for (const n of players) html += `<th>${n}</th>`;
+            html += '</tr></thead><tbody>';
+
+            // Body
+            for (const k of rounds) {
+                const single = (tier === '1') ? SINGLE.oneRow[k]
+                              : (tier === '2') ? SINGLE.twoRows[k]
+                              : SINGLE.full[k];
+                html += `<tr><td>${k}</td>`;
+                for (const n of players) {
+                    const totalPlates = n * platesPerPlayer;
+                    const p = anyWins(single, totalPlates);
+                    const bg = probToColor(p);
+                    const tc = probToText(p);
+                    const title = `${n} player${n===1?'':'s'} × ${platesPerPlayer} plate${platesPerPlayer===1?'':'s'} = ${fmtNum(n*platesPerPlayer)} plates\nAfter ${k} draws → P = ${fmtPct(p, 3)}`;
+                    html += `<td style="background:${bg};color:${tc}" title="${title}">${fmtPct(p, 1)}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody>';
+            tbl.innerHTML = html;
+        }
+
+        // ----- Detail table (round × tier for current setup) -----
+        function renderDetailTable(multi) {
+            const tbl = document.getElementById('detailTable');
+            const rounds = [];
+            for (let k = 1; k <= N_TOTAL; k++) rounds.push(k);
+
+            let html = `
+                <thead><tr>
+                    <th>Round</th>
+                    <th>Single — 1 row</th>
+                    <th>Single — 2 rows</th>
+                    <th>Single — full plate</th>
+                    <th>Any player — 1 row</th>
+                    <th>Any player — 2 rows</th>
+                    <th>Any player — full plate</th>
+                </tr></thead><tbody>`;
+            for (const k of rounds) {
+                html += `<tr><td>${k}</td>`
+                     + `<td>${fmtPct(SINGLE.oneRow[k], 2)}</td>`
+                     + `<td>${fmtPct(SINGLE.twoRows[k], 2)}</td>`
+                     + `<td>${fmtPct(SINGLE.full[k], 2)}</td>`
+                     + `<td>${fmtPct(multi.oneRow[k], 2)}</td>`
+                     + `<td>${fmtPct(multi.twoRows[k], 2)}</td>`
+                     + `<td>${fmtPct(multi.full[k], 2)}</td>`
+                     + '</tr>';
+            }
+            html += '</tbody>';
+            tbl.innerHTML = html;
+        }
+
+        // ============================================================
+        //  First-win distribution + normal fit
+        // ============================================================
+        function computeDistribution(tierSeries) {
+            // PMF[k] = P(first win at exactly round k)
+            const pmf = new Array(N_TOTAL + 1).fill(0);
+            for (let k = 1; k <= N_TOTAL; k++) pmf[k] = Math.max(0, tierSeries[k] - tierSeries[k - 1]);
+            // Any remaining probability (CDF < 1) is attributed to k = 90 in moment calculation
+            let cumPMF = 0;
+            for (let k = 1; k <= N_TOTAL; k++) cumPMF += pmf[k];
+            const remainder = Math.max(0, 1 - cumPMF);
+            let mu = 0, mu2 = 0;
+            for (let k = 1; k <= N_TOTAL; k++) {
+                mu  += k * pmf[k];
+                mu2 += k * k * pmf[k];
+            }
+            mu  += N_TOTAL * remainder;
+            mu2 += N_TOTAL * N_TOTAL * remainder;
+            const sigma = Math.sqrt(Math.max(0, mu2 - mu * mu));
+            function normalPDF(x) {
+                if (sigma < 0.5) return 0;
+                return Math.exp(-0.5 * ((x - mu) / sigma) ** 2) /
+                       (sigma * Math.sqrt(2 * Math.PI));
+            }
+            return { pmf, mu, sigma, normalPDF };
+        }
+
+        function buildDistAnnotations(mu, sigma, normalPDF) {
+            const C = { 1: '#00b386', 2: '#f4a261', 3: '#e63946' };
+            const ann = {};
+
+            // Mean — solid vertical line
+            ann.mean = {
+                type: 'line', scaleID: 'x', value: mu,
+                borderColor: '#004d3d', borderWidth: 2.2,
+                label: {
+                    content: [`μ = ${fmtNum(mu, 1)}`], display: true, position: 'end',
+                    backgroundColor: '#004d3ddd', color: '#fff',
+                    font: { size: 9, weight: '700', family: 'Inter' }, padding: { x: 4, y: 2 }
+                }
+            };
+
+            for (const n of [1, 2, 3]) {
+                const yH = normalPDF(mu + n * sigma); // same on both sides (symmetric)
+
+                // Horizontal dashed line at the PDF height of μ ± nσ
+                if (yH > 0) {
+                    ann[`hline${n}`] = {
+                        type: 'line', scaleID: 'y', value: yH,
+                        borderColor: C[n], borderWidth: 1.4, borderDash: [6, 4],
+                        label: {
+                            content: `${n}σ height`, display: true, position: 'end',
+                            backgroundColor: C[n] + 'dd', color: '#fff',
+                            font: { size: 9, weight: '700', family: 'Inter' }, padding: { x: 3, y: 2 }
+                        }
+                    };
+                }
+
+                // Vertical dashed lines at μ − nσ and μ + nσ
+                for (const s of [-1, 1]) {
+                    const xV = mu + s * n * sigma;
+                    if (xV < 1 || xV > N_TOTAL) continue;
+                    ann[`vl${s > 0 ? 'p' : 'm'}${n}`] = {
+                        type: 'line', scaleID: 'x', value: xV,
+                        borderColor: C[n], borderWidth: 1.5, borderDash: [4, 3],
+                        label: {
+                            content: [`${s > 0 ? '+' : '−'}${n}σ`, fmtNum(xV, 1)],
+                            display: true, position: 'end',
+                            backgroundColor: C[n] + 'cc', color: '#fff',
+                            font: { size: 9, weight: '600', family: 'Inter' }, padding: { x: 3, y: 2 }
+                        }
+                    };
+                }
+            }
+            return ann;
+        }
+
+        function renderDistributionChart(multi, tier) {
+            const tierKey = tier === '1' ? 'oneRow' : tier === '2' ? 'twoRows' : 'full';
+            const { pmf, mu, sigma, normalPDF } = computeDistribution(multi[tierKey]);
+
+            const labels   = Array.from({length: N_TOTAL}, (_, i) => i + 1);
+            const pmfData  = labels.map(k => pmf[k]);
+            const normData = labels.map(k => normalPDF(k));
+
+            // KPI mini-strip
+            const C = { 1: '#00b386', 2: '#f4a261', 3: '#e63946' };
+            const rules = { 1: '68', 2: '95', 3: '99,7' };
+            let kpiHtml = `
+                <div class="kpi">
+                    <div class="label">Mean μ</div>
+                    <div class="value">${fmtNum(mu, 1)}</div>
+                    <div class="sub">expected first-win round</div>
+                </div>
+                <div class="kpi">
+                    <div class="label">Std. deviation σ</div>
+                    <div class="value">${fmtNum(sigma, 1)}</div>
+                    <div class="sub">rounds</div>
+                </div>`;
+            for (const n of [1, 2, 3]) {
+                const lo = Math.max(1,  Math.round(mu - n * sigma));
+                const hi = Math.min(90, Math.round(mu + n * sigma));
+                kpiHtml += `
+                <div class="kpi" style="border-left-color:${C[n]}">
+                    <div class="label">μ ± ${n}σ</div>
+                    <div class="value">${lo} – ${hi}</div>
+                    <div class="sub">rounds  (${rules[n]}% rule)</div>
+                </div>`;
+            }
+            document.getElementById('distKpis').innerHTML = kpiHtml;
+
+            const annotations = buildDistAnnotations(mu, sigma, normalPDF);
+            const ctx = document.getElementById('distChartCanvas').getContext('2d');
+
+            if (distChart) {
+                distChart.data.labels = labels;
+                distChart.data.datasets[0].data = pmfData;
+                distChart.data.datasets[1].data = normData;
+                distChart.options.plugins.annotation.annotations = annotations;
+                distChart.update('none');
+                return;
+            }
+
+            distChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'First-win probability (PMF)',
+                            data: pmfData,
+                            backgroundColor: 'rgba(0,179,134,.22)',
+                            borderColor: 'rgba(0,122,94,.50)',
+                            borderWidth: 0.5,
+                            order: 2
+                        },
+                        {
+                            type: 'line',
+                            label: 'Fitted normal distribution',
+                            data: normData,
+                            borderColor: '#004d3d',
+                            borderWidth: 2.5,
+                            backgroundColor: 'rgba(0,77,61,.07)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Inter' }, boxWidth: 14 } },
+                        tooltip: {
+                            callbacks: {
+                                title: items => `After ${items[0].label} draws`,
+                                label: ctx => `${ctx.dataset.label}: ${fmtPct(ctx.parsed.y, 3)}`
+                            }
+                        },
+                        annotation: { annotations }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Round (numbers drawn)' },
+                            grid: { color: '#eef0f3' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Probability per round' },
+                            grid: { color: '#eef0f3' },
+                            ticks: { callback: v => fmtPct(v, 1) }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        //  Monte Carlo cross-check
+        // ============================================================
+        function runMonteCarlo(numPlates, numTrials = 2000) {
+            // For each tier, count cumulative wins by round
+            const cum = {
+                oneRow:  new Array(N_TOTAL + 1).fill(0),
+                twoRows: new Array(N_TOTAL + 1).fill(0),
+                full:    new Array(N_TOTAL + 1).fill(0)
+            };
+
+            // Pre-allocate buffers
+            const pool   = new Int8Array(N_TOTAL + 1);   // marks plate membership scratch
+            const draws  = new Int32Array(N_TOTAL);
+
+            for (let trial = 0; trial < numTrials; trial++) {
+                // Generate plates: each plate is 3 disjoint rows of 5 distinct numbers from 1..90.
+                // Represent rows as plain arrays of length 5; store plates as array of {rows, counts, completed}.
+                const plates = new Array(numPlates);
+                for (let p = 0; p < numPlates; p++) {
+                    // sample 15 distinct from 1..90 via partial Fisher-Yates over 1..90
+                    const arr = new Int32Array(N_TOTAL);
+                    for (let i = 0; i < N_TOTAL; i++) arr[i] = i + 1;
+                    for (let i = 0; i < PLATE_SIZE; i++) {
+                        const j = i + Math.floor(Math.random() * (N_TOTAL - i));
+                        const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+                    }
+                    // membership lookup: number -> rowIndex (-1 if absent)
+                    const rowOf = new Int8Array(N_TOTAL + 1);
+                    rowOf.fill(-1);
+                    for (let i = 0; i < PLATE_SIZE; i++) {
+                        const num = arr[i];
+                        rowOf[num] = (i < 5) ? 0 : (i < 10 ? 1 : 2);
+                    }
+                    plates[p] = {
+                        rowOf,
+                        counts: [0, 0, 0],
+                        completedRows: 0
+                    };
+                }
+
+                // Draw sequence: random permutation of 1..90
+                for (let i = 0; i < N_TOTAL; i++) draws[i] = i + 1;
+                for (let i = N_TOTAL - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    const t = draws[i]; draws[i] = draws[j]; draws[j] = t;
+                }
+
+                let r1 = N_TOTAL + 1, r2 = N_TOTAL + 1, r3 = N_TOTAL + 1;
+
+                for (let k = 0; k < N_TOTAL; k++) {
+                    const number = draws[k];
+                    const round = k + 1;
+
+                    for (let p = 0; p < numPlates; p++) {
+                        const plate = plates[p];
+                        if (plate.completedRows === 3) continue;
+                        const r = plate.rowOf[number];
+                        if (r === -1) continue;
+                        plate.counts[r]++;
+                        if (plate.counts[r] === ROW_SIZE) {
+                            plate.completedRows++;
+                            if (plate.completedRows === 1 && round < r1) r1 = round;
+                            if (plate.completedRows === 2 && round < r2) r2 = round;
+                            if (plate.completedRows === 3 && round < r3) r3 = round;
+                        }
+                    }
+
+                    if (r3 <= round) break;
+                }
+
+                if (r1 <= N_TOTAL) for (let k = r1; k <= N_TOTAL; k++) cum.oneRow[k]++;
+                if (r2 <= N_TOTAL) for (let k = r2; k <= N_TOTAL; k++) cum.twoRows[k]++;
+                if (r3 <= N_TOTAL) for (let k = r3; k <= N_TOTAL; k++) cum.full[k]++;
+            }
+
+            return {
+                oneRow:  cum.oneRow.map(c => c / numTrials),
+                twoRows: cum.twoRows.map(c => c / numTrials),
+                full:    cum.full.map(c => c / numTrials)
+            };
+        }
+
+        document.getElementById('mcButton').addEventListener('click', () => {
+            const btn = document.getElementById('mcButton');
+            const status = document.getElementById('mcStatus');
+            const players = Math.max(1, parseInt(document.getElementById('players').value) || 1);
+            const plates  = Math.max(1, parseInt(document.getElementById('plates').value)  || 1);
+            const totalPlates = players * plates;
+
+            btn.disabled = true;
+            btn.textContent = 'Running…';
+            status.textContent = `Simulating 2.000 games with ${fmtNum(totalPlates)} plates…`;
+            status.className = 'hint';
+
+            // Defer so the UI repaints
+            setTimeout(() => {
+                const t0 = performance.now();
+                try {
+                    mcResult = runMonteCarlo(totalPlates, 2000);
+                    const dt = (performance.now() - t0) / 1000;
+                    status.textContent = `Done in ${fmtNum(dt, 2)} s — dashed MC curves overlaid on the chart.`;
+                    status.className = 'status success';
+                    render();
+                } catch (err) {
+                    status.textContent = 'Simulation failed: ' + err.message;
+                    status.className = 'status error';
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Run Monte Carlo';
+                }
+            }, 30);
+        });
+
+        // ============================================================
+        //  Wire up inputs & first render
+        // ============================================================
+        ['players', 'plates', 'tier', 'showSingle'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                // Invalidate MC when player/plate count changes (different N_p)
+                if (id === 'players' || id === 'plates') {
+                    mcResult = null;
+                    document.getElementById('mcStatus').textContent =
+                        '2.000 random games — verifies the analytic curves.';
+                    document.getElementById('mcStatus').className = 'hint';
+                }
+                render();
+            });
+        });
+
+        render();
+    </script>
+</body>
+</html>
